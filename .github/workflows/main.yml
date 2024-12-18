@@ -25,9 +25,14 @@ jobs:
           distribution: 'temurin' # Specifies the JDK distribution (Eclipse Temurin in this case)
 
      #finally build your app with the latest command
-      - name: Build and test with Maven
-        run: mvn clean verify # Run Maven to clean, build, and verify the application
-        working-directory: ./simple-api # We specify of the directory that has the pom.xml, otherwise this won't work
+      - name: Build and test with Maven and SonarCloud
+        run: |
+         mvn -B verify sonar:sonar \
+         -Dsonar.projectKey=devops-2024 \
+         -Dsonar.organization=devops-school \
+         -Dsonar.host.url=https://sonarcloud.io \
+         -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
+         --file ./simple-api/pom.xml
    # define job to build and publish docker image
   build-and-push-docker-image:
     needs: test-backend
