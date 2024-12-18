@@ -8,7 +8,7 @@ on:
   pull_request:
     branches:
       - main # Trigger the workflow when a PR is made targeting the main branch
-      - develop # Trigger the workflow when a PR is made targeting the develop branch
+      - develop # Trigger the workflow when a PR is made targeting the develop branchhh
 
 jobs:
   test-backend: 
