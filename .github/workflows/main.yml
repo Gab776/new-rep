@@ -3,12 +3,12 @@ on:
   #to begin you want to launch this job in main and develop
   push:
     branches:
-      - main
-      - develop 
+      - main # Trigger the workflow when code is pushed to the main branch
+      - develop # Trigger the workflow when code is pushed to the develop branch
   pull_request:
     branches:
-      - main
-      - develop 
+      - main # Trigger the workflow when a PR is made targeting the main branch
+      - develop # Trigger the workflow when a PR is made targeting the develop branch
 
 jobs:
   test-backend: 
@@ -19,12 +19,56 @@ jobs:
 
      #do the same with another action (actions/setup-java@v3) that enable to setup jdk 17
       - name: Set up JDK 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v3 # automates the installation of JDK versions.
         with:
           java-version: '17'
-          distribution: 'temurin'
+          distribution: 'temurin' # Specifies the JDK distribution (Eclipse Temurin in this case)
 
      #finally build your app with the latest command
       - name: Build and test with Maven
-        run: mvn clean verify
-        working-directory: ./simple-api
+        run: mvn clean verify # Run Maven to clean, build, and verify the application
+        working-directory: ./simple-api # We specify of the directory that has the pom.xml, otherwise this won't work
+   # define job to build and publish docker image
+  build-and-push-docker-image:
+    needs: test-backend
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2.5.0
+
+      - name: Build image and push backend
+        uses: docker/build-push-action@v3
+        with:
+          # relative path to the place where source code with Dockerfile is located
+          context: ./simple-api
+          # Note: tags has to be all lower-case
+          tags:  ${{secrets.DOCKERHUB_USERNAME}}/tp-devops-simple-api:latest
+      
+      - name: Build image and push database
+        uses: docker/build-push-action@v3
+        with:
+          context: ./database  # Path to the database Dockerfile
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-database:latest
+          push: ${{ github.ref == 'refs/heads/main' }}  # Only push on main branch
+
+      - name: Build image and push httpd
+        uses: docker/build-push-action@v3
+        with:
+          context: ./http-server  # Path to the HTTP server Dockerfile
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-httpd:latest
+          push: ${{ github.ref == 'refs/heads/main' }}  # Only push on main branch
+
+      - name: Login to DockerHub
+        run: docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build image and push backend
+        uses: docker/build-push-action@v3
+        with:
+          # relative path to the place where source code with Dockerfile is located
+          context: ./simple-api
+          # Note: tags has to be all lower-case
+          tags:  ${{secrets.DOCKERHUB_USERNAME}}/tp-devops-simple-api:latest
+          # build on feature branches, push only on main branch
+          push: ${{ github.ref == 'refs/heads/main' }}
+
+ 
